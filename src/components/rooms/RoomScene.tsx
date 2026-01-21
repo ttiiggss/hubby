@@ -36,7 +36,7 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
         {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <planeGeometry args={[floorSize, floorSize]} />
-          <meshStandardMaterial color={bgColor} />
+          <meshLambertMaterial color={bgColor} />
         </mesh>
 
         {/* User Avatars */}
@@ -48,26 +48,29 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
           const z = Math.sin(angle) * radius;
           const hash = user.pubkey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
           const hue = (hash % 360) / 360;
-          const color = `hsl(${hue * 360}, 70%, 60%)`;
+
+          // Predefined colors based on hash to avoid HSL strings
+          const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
+          const color = colors[hash % colors.length];
 
           return (
             <group key={user.pubkey} position={[x, 0.5, z]}>
               <mesh>
                 <boxGeometry args={[1, 1, 1]} />
-                <meshStandardMaterial color={color} />
+                <meshLambertMaterial color={color} />
               </mesh>
 
               {/* Base */}
               <mesh position={[0, -0.6, 0]}>
                 <boxGeometry args={[0.8, 0.2, 0.8]} />
-                <meshStandardMaterial color="#8b5cf6" />
+                <meshLambertMaterial color="#8b5cf6" />
               </mesh>
 
               {/* Current User Indicator */}
               {isCurrentUser && (
                 <mesh position={[0, 1.1, 0]}>
                   <boxGeometry args={[1.2, 0.1, 1.2]} />
-                  <meshBasicMaterial color="#22c55e" transparent opacity={0.5} />
+                  <meshLambertMaterial color="#22c55e" transparent opacity={0.5} />
                 </mesh>
               )}
             </group>
