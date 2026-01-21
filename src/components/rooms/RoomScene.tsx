@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, Grid } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
 import { Avatar3D } from './Avatar3D';
 import type { Room, UserPosition } from '@/types/rooms';
 
@@ -32,8 +32,50 @@ function RoomFloor({ size = 20, color = '#1a1a2e' }: { size?: number; color?: st
   );
 }
 
+function RoomGridLines({ size = 20, divisions = 20 }: { size?: number; divisions?: number }) {
+  const step = size / divisions;
+  const halfSize = size / 2;
+  
+  const lines: JSX.Element[] = [];
+  
+  for (let i = 0; i <= divisions; i++) {
+    const pos = -halfSize + i * step;
+    
+    // Horizontal line
+    lines.push(
+      <line key={`h-${i}`} position={[0, 0.01, pos]}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([-halfSize, 0, pos, halfSize, 0, pos])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
+      </line>
+    );
+    
+    // Vertical line
+    lines.push(
+      <line key={`v-${i}`} position={[pos, 0.01, -halfSize]}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([pos, 0, -halfSize, pos, 0, halfSize])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
+      </line>
+    );
+  }
+  
+  return <group>{lines}</group>;
+}
+
 export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
-  // Generate some demo positions for users if none provided
   const demoUsers: UserPosition[] = users.length > 0 ? users : [
     {
       pubkey: 'demo1',
@@ -63,28 +105,13 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
 
         <RoomEnvironment />
 
-        <Grid
-          args={[floorSize, floorSize]}
-          cellColor="#8b5cf6"
-          sectionColor="#1e1e3f"
-          cellSize={1}
-          cellThickness={0.02}
-          cellColor="#8b5cf640"
-          sectionSize={5}
-          sectionThickness={0.05}
-          sectionColor="#8b5cf6"
-          fadeDistance={25}
-          fadeStrength={1}
-          followCamera={false}
-          infiniteGrid
-        />
+        <RoomGridLines size={floorSize} />
 
         <RoomFloor
           size={floorSize}
           color={room.scene.backgroundColor || '#1a1a2e'}
         />
 
-        {/* Render user avatars */}
         {demoUsers.map((user, index) => {
           const isCurrentUser = user.pubkey === currentUserPubkey;
           const angle = (index / Math.max(1, demoUsers.length)) * Math.PI * 2;
