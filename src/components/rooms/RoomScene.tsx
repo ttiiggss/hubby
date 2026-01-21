@@ -1,8 +1,9 @@
 import { useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, Sky, Stars, Grid } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
 import { Avatar3D } from './Avatar3D';
 import type { Room, UserPosition } from '@/types/rooms';
+import * as THREE from 'three';
 
 interface RoomSceneProps {
   room: Room;
@@ -10,24 +11,49 @@ interface RoomSceneProps {
   currentUserPubkey?: string;
 }
 
-function RoomEnvironment({ backgroundColor }: { backgroundColor: string }) {
+function RoomEnvironment() {
   return (
     <>
-      <Sky distance={450000} sunPosition={[0, 1, 0]} inclination={0} azimuth={0.25} />
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       <pointLight position={[-10, 10, -10]} intensity={0.5} color="#8b5cf6" />
+      <Stars />
     </>
   );
 }
 
-function RoomFloor({ size = 20 }: { size?: number }) {
+function Stars() {
+  const points = useRef<THREE.Points>();
+  const count = 1000;
+
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 100;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+  }
+
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+    <points ref={points}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={count}
+          array={positions}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <pointsMaterial size={0.5} color="#ffffff" transparent opacity={0.8} />
+    </points>
+  );
+}
+
+function RoomFloor({ size = 20, color = '#1a1a2e' }: { size?: number; color?: string }) {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial
-        color="#1a1a2e"
+        color={color}
         roughness={0.8}
         metalness={0.2}
       />
@@ -35,24 +61,50 @@ function RoomFloor({ size = 20 }: { size?: number }) {
   );
 }
 
-function RoomGridCustom({ size = 20, divisions = 20 }: { size?: number; divisions?: number }) {
-  return (
-    <Grid
-      args={[size, divisions]}
-      cellColor="#8b5cf6"
-      sectionColor="#1e1e3f"
-      cellSize={size / divisions}
-      cellThickness={0.02}
-      cellColor="#8b5cf640"
-      sectionSize={size}
-      sectionThickness={0.05}
-      sectionColor="#8b5cf6"
-      fadeDistance={25}
-      fadeStrength={1}
-      followCamera={false}
-      infiniteGrid
-    />
-  );
+function RoomGrid({ size = 20, divisions = 20 }: { size?: number; divisions?: number }) {
+  const gridSize = size;
+  const step = size / divisions;
+
+  // Create grid lines manually
+  const lines: JSX.Element[] = [];
+  
+  // Horizontal lines
+  for (let i = -divisions / 2; i <= divisions / 2; i++) {
+    const pos = i * step;
+    lines.push(
+      <line key={`h-${i}`}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([-gridSize/2, 0, pos, gridSize/2, 0, pos])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
+      </line>
+    );
+  }
+
+  // Vertical lines
+  for (let i = -divisions / 2; i <= divisions / 2; i++) {
+    const pos = i * step;
+    lines.push(
+      <line key={`v-${i}`}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([pos, 0, -gridSize/2, pos, 0, gridSize/2])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
+      </line>
+    );
+  }
+
+  return <group>{lines}</group>;
 }
 
 export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
@@ -82,9 +134,12 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
           maxPolarAngle={Math.PI / 2}
         />
 
-        <RoomEnvironment backgroundColor={room.scene.backgroundColor || '#1a1a2e'} />
-        <RoomFloor size={room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20} />
-        <RoomGridCustom size={room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20} />
+        <RoomEnvironment />
+        <RoomFloor 
+          size={room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20}
+          color={room.scene.backgroundColor || '#1a1a2e'}
+        />
+        <RoomGrid size={room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20} />
 
         {/* Render user avatars */}
         {demoUsers.map((user, index) => {
