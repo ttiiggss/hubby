@@ -12,9 +12,11 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { data: rooms = [], isLoading } = useRooms();
 
+  console.log('Index render:', { user: user?.pubkey, roomsCount: rooms.length, isLoading });
+
   useSeoMeta({
     title: 'Nostr-Space - 3D Social Rooms on Nostr',
-    description: 'Explore and create virtual spaces where people gather, chat, and connect on the decentralized web.',
+    description: 'Explore and create virtual spaces where people gather, chat, and share experiences on decentralized web.',
   });
 
   return (
@@ -42,7 +44,7 @@ const Index = () => {
             </h1>
 
             <p className="mb-8 text-xl text-gray-300 sm:text-2xl">
-              Create immersive rooms where people gather, chat, and share experiences on the decentralized web.
+              Create immersive rooms where people gather, chat, and share experiences on decentralized web.
             </p>
 
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -52,7 +54,6 @@ const Index = () => {
                 <Button
                   size="lg"
                   className="gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                  onClick={() => window.location.href = '#login'}
                 >
                   <Zap className="h-5 w-5" />
                   Get Started
@@ -110,7 +111,7 @@ const Index = () => {
           <div>
             <h2 className="text-3xl font-bold text-white">Explore Rooms</h2>
             <p className="mt-2 text-gray-400">
-              Discover spaces created by the Nostr community
+              Discover spaces created by Nostr community
             </p>
           </div>
 
@@ -126,7 +127,7 @@ const Index = () => {
           <div className="mx-auto max-w-4xl px-6 py-16 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white">Ready to Create?</h2>
             <p className="mb-8 text-xl text-gray-300">
-              Join the Nostr-Space community and start building your own virtual rooms.
+              Join Nostr-Space community and start building your own virtual rooms.
             </p>
             <div className="flex justify-center gap-4">
               <LoginArea />
@@ -147,8 +148,8 @@ const Index = () => {
               className="text-purple-400 hover:text-purple-300 transition-colors"
             >
               Shakespeare
-            </a>{' '}
-            and powered by Nostr
+            </a>
+            {' '}and powered by Nostr
           </p>
         </div>
       </footer>
