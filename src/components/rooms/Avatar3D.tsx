@@ -23,7 +23,8 @@ export function Avatar3D({ pubkey, position, rotation = 0, isCurrentUser = false
   useFrame((state) => {
     if (groupRef.current) {
       // Floating animation
-      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.1;
+      const time = state.clock.elapsedTime;
+      groupRef.current.position.y = Math.sin(time * 2) * 0.1 + 1;
 
       // Slow rotation when not hovered
       if (!hovered) {
@@ -46,7 +47,7 @@ export function Avatar3D({ pubkey, position, rotation = 0, isCurrentUser = false
       onPointerOut={() => setHovered(false)}
     >
       {/* Avatar body */}
-      <Sphere args={[0.5, 32, 32]} position={[0, 1, 0]} castShadow receiveShadow>
+      <Sphere args={[0.5, 32, 32]} castShadow receiveShadow>
         <meshStandardMaterial
           color={color}
           roughness={0.3}
@@ -67,7 +68,7 @@ export function Avatar3D({ pubkey, position, rotation = 0, isCurrentUser = false
 
       {/* Name label */}
       <Text
-        position={[0, 2, 0]}
+        position={[0, 2.5, 0]}
         fontSize={0.3}
         color={isCurrentUser ? '#22c55e' : 'white'}
         anchorX="center"
@@ -81,7 +82,7 @@ export function Avatar3D({ pubkey, position, rotation = 0, isCurrentUser = false
 
       {/* Ring effect for current user */}
       {isCurrentUser && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
           <ringGeometry args={[0.6, 0.7, 32]} />
           <meshBasicMaterial color="#22c55e" transparent opacity={0.5} />
         </mesh>

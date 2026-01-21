@@ -1,9 +1,7 @@
-import { useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment, Grid } from '@react-three/drei';
 import { Avatar3D } from './Avatar3D';
 import type { Room, UserPosition } from '@/types/rooms';
-import * as THREE from 'three';
 
 interface RoomSceneProps {
   room: Room;
@@ -17,34 +15,7 @@ function RoomEnvironment() {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       <pointLight position={[-10, 10, -10]} intensity={0.5} color="#8b5cf6" />
-      <Stars />
     </>
-  );
-}
-
-function Stars() {
-  const points = useRef<THREE.Points>();
-  const count = 1000;
-
-  const positions = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    positions[i * 3] = (Math.random() - 0.5) * 100;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
-  }
-
-  return (
-    <points ref={points}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={count}
-          array={positions}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <pointsMaterial size={0.5} color="#ffffff" transparent opacity={0.8} />
-    </points>
   );
 }
 
@@ -61,52 +32,6 @@ function RoomFloor({ size = 20, color = '#1a1a2e' }: { size?: number; color?: st
   );
 }
 
-function RoomGrid({ size = 20, divisions = 20 }: { size?: number; divisions?: number }) {
-  const gridSize = size;
-  const step = size / divisions;
-
-  // Create grid lines manually
-  const lines: JSX.Element[] = [];
-  
-  // Horizontal lines
-  for (let i = -divisions / 2; i <= divisions / 2; i++) {
-    const pos = i * step;
-    lines.push(
-      <line key={`h-${i}`}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([-gridSize/2, 0, pos, gridSize/2, 0, pos])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
-      </line>
-    );
-  }
-
-  // Vertical lines
-  for (let i = -divisions / 2; i <= divisions / 2; i++) {
-    const pos = i * step;
-    lines.push(
-      <line key={`v-${i}`}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([pos, 0, -gridSize/2, pos, 0, gridSize/2])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
-      </line>
-    );
-  }
-
-  return <group>{lines}</group>;
-}
-
 export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
   // Generate some demo positions for users if none provided
   const demoUsers: UserPosition[] = users.length > 0 ? users : [
@@ -120,6 +45,8 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
       updatedAt: Date.now(),
     },
   ];
+
+  const floorSize = room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20;
 
   return (
     <div className="canvas-container rounded-xl overflow-hidden bg-black">
@@ -135,11 +62,27 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
         />
 
         <RoomEnvironment />
-        <RoomFloor 
-          size={room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20}
+
+        <Grid
+          args={[floorSize, floorSize]}
+          cellColor="#8b5cf6"
+          sectionColor="#1e1e3f"
+          cellSize={1}
+          cellThickness={0.02}
+          cellColor="#8b5cf640"
+          sectionSize={5}
+          sectionThickness={0.05}
+          sectionColor="#8b5cf6"
+          fadeDistance={25}
+          fadeStrength={1}
+          followCamera={false}
+          infiniteGrid
+        />
+
+        <RoomFloor
+          size={floorSize}
           color={room.scene.backgroundColor || '#1a1a2e'}
         />
-        <RoomGrid size={room.scene.maxUsers ? Math.max(20, room.scene.maxUsers) : 20} />
 
         {/* Render user avatars */}
         {demoUsers.map((user, index) => {
