@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
-import { Avatar3D } from './Avatar3D';
+import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { Sphere, Cylinder, Text } from '@react-three/drei';
 import type { Room, UserPosition } from '@/types/rooms';
 
 interface RoomSceneProps {
@@ -22,57 +22,52 @@ function RoomEnvironment() {
 function RoomFloor({ size = 20, color = '#1a1a2e' }: { size?: number; color?: string }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-      <planeGeometry args={[size, size]} />
-      <meshStandardMaterial
-        color={color}
-        roughness={0.8}
-        metalness={0.2}
-      />
+      <boxGeometry args={[size, size, 0.1]} />
+      <meshStandardMaterial color={color} roughness={0.8} />
     </mesh>
   );
 }
 
-function RoomGridLines({ size = 20, divisions = 20 }: { size?: number; divisions?: number }) {
-  const step = size / divisions;
-  const halfSize = size / 2;
-  
-  const lines: JSX.Element[] = [];
-  
-  for (let i = 0; i <= divisions; i++) {
-    const pos = -halfSize + i * step;
-    
-    // Horizontal line
-    lines.push(
-      <line key={`h-${i}`} position={[0, 0.01, pos]}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([-halfSize, 0, pos, halfSize, 0, pos])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
-      </line>
-    );
-    
-    // Vertical line
-    lines.push(
-      <line key={`v-${i}`} position={[pos, 0.01, -halfSize]}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([pos, 0, -halfSize, pos, 0, halfSize])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
-      </line>
-    );
-  }
-  
-  return <group>{lines}</group>;
+function UserAvatar({ pubkey, position, isCurrentUser = false }: { pubkey: string; position: [number, number, number]; isCurrentUser?: boolean }) {
+  const hash = pubkey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hue = (hash % 360) / 360;
+  const color = `hsl(${hue * 360}, 70%, 60%)`;
+  const name = pubkey.substring(0, 8);
+
+  return (
+    <group position={position}>
+      <Sphere args={[0.5, 16, 16]} castShadow>
+        <meshStandardMaterial
+          color={color}
+          roughness={0.3}
+          metalness={0.5}
+          emissive={color}
+          emissiveIntensity={0.2}
+        />
+      </Sphere>
+
+      <Cylinder args={[0.4, 0.4, 0.1, 16]} position={[0, -0.35, 0]} castShadow>
+        <meshStandardMaterial color="#8b5cf6" roughness={0.2} />
+      </Cylinder>
+
+      <Text
+        position={[0, 1.2, 0]}
+        fontSize={0.4}
+        color={isCurrentUser ? '#22c55e' : 'white'}
+        anchorX="center"
+        anchorY="bottom"
+      >
+        {name}
+        {isCurrentUser && ' (You)'}
+      </Text>
+
+      {isCurrentUser && (
+        <Sphere args={[0.7, 16, 16, 32]} position={[0, 0, 0]}>
+          <meshBasicMaterial color="#22c55e" wireframe />
+        </Sphere>
+      )}
+    </group>
+  );
 }
 
 export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
@@ -105,8 +100,6 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
 
         <RoomEnvironment />
 
-        <RoomGridLines size={floorSize} />
-
         <RoomFloor
           size={floorSize}
           color={room.scene.backgroundColor || '#1a1a2e'}
@@ -120,17 +113,14 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
           const z = Math.sin(angle) * radius;
 
           return (
-            <Avatar3D
+            <UserAvatar
               key={user.pubkey}
               pubkey={user.pubkey}
               position={[x, 0, z]}
-              rotation={user.rotation || 0}
               isCurrentUser={isCurrentUser}
             />
           );
         })}
-
-        <Environment preset="sunset" blur={0.8} />
       </Canvas>
     </div>
   );
