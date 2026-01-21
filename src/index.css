@@ -99,3 +99,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-purple-600/50 hover:bg-purple-600/70;
+  }
+
+  /* Gradient text animation */
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-black/40 backdrop-blur-sm;
+  }
+
+  /* 3D Canvas container */
+  .canvas-container {
+    @apply h-full w-full;
+  }
+}
