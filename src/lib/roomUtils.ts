@@ -1,126 +1,86 @@
-import type { NostrEvent } from '@nostrify/nostrify';
-import type { Room, RoomSceneConfig, RoomMessage } from '@/types/rooms';
+import type { RoomMessage } from '@/types/rooms';
 
 /**
- * Parse a room definition event (kind 12347) into a Room object
+ * Parse room messages (both permanent kind 1 and ephemeral kind 30000)
+ * Returns properly typed messages with expiration information for ephemeral messages
  */
-export function parseRoomEvent(event: NostrEvent): Room | null {
-  if (event.kind !== 12347) {
-    return null;
+export function parseRoomMessages(events: unknown[], roomEventId: string): RoomMessage[] {
+  if (!events || !Array.isArray(events)) {
+    return [];
   }
 
-  const dTag = event.tags.find(([name]) => name === 'd')?.[1];
-  const title = event.tags.find(([name]) => name === 'title')?.[1];
-  const description = event.tags.find(([name]) => name === 'description')?.[1] || event.content;
-  const image = event.tags.find(([name]) => name === 'image')?.[1];
-  const sceneTag = event.tags.find(([name]) => name === 'scene')?.[1];
-  const tags = event.tags
-    .filter(([name]) => name === 't')
-    .map(([_, tag]) => tag);
-
-  if (!dTag || !title) {
-    return null;
-  }
-
-  let scene: RoomSceneConfig = {
-    backgroundColor: '#1a1a2e',
-    maxUsers: 20,
-    isPublic: true,
-    roomType: 'social',
-  };
-
-  if (sceneTag) {
-    try {
-      const parsed = JSON.parse(sceneTag);
-      scene = { ...scene, ...parsed };
-    } catch (e) {
-      console.warn('Failed to parse scene config:', sceneTag);
-    }
-  }
-
-  return {
-    id: `${event.pubkey}:${dTag}`,
-    eventId: event.id,
-    author: event.pubkey,
-    title,
-    description,
-    image,
-    scene,
-    tags,
-    createdAt: event.created_at,
-    updatedAt: event.created_at,
-  };
-}
-
-/**
- * Parse room messages from kind 1 events
- */
-export function parseRoomMessages(events: NostrEvent[], roomId: string): RoomMessage[] {
   return events
-    .filter((event) => {
-      // Check if event references the room
-      const eTags = event.tags.filter(([name]) => name === 'e');
-      return eTags.some(([_, eventId]) => eventId === roomId);
-    })
-    .map((event) => ({
-      ...event,
-      roomId,
-    }))
-    .sort((a, b) => a.created_at - b.created_at);
+    .map((event): RoomMessage => {
+      const id = event.id;
+      const pubkey = event.pubkey;
+      const content = event.content;
+      const created_at = event.created_at;
+      const kind = event.kind;
+
+      // Check if ephemeral message (kind 30000)
+      const isEphemeral = kind === 30000;
+      
+      // Extract expiration time from tags
+      let expiration: Date | undefined = undefined;
+      const expirationTag = event.tags.find(([name]) => name === 'expiration');
+      if (expirationTag && expirationTag[1]) {
+        expiration = new Date(parseInt(expirationTag[1]) * 1000);
+      }
+
+      // Check if this is an ephemeral chat message (references room)
+      const isEphemeralChat = event.tags.some(([name, value]) => 
+        name === 'e' && value === roomEventId
+      );
+
+      return {
+        id,
+        pubkey,
+        content,
+        created_at,
+        kind,
+        isEphemeral,
+        isEphemeralChat,
+        expiration,
+        tags: event.tags,
+      };
+    });
 }
 
 /**
- * Generate a unique room ID
+ * Generate a unique ephemeral room ID
+ * Creates an ephemeral identifier that won't conflict with other room events
  */
-export function generateRoomId(): string {
+export function generateEphemeralId(): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 10);
-  return `room-${timestamp}-${random}`;
+  return `ephem-${timestamp}-${random}`;
 }
 
 /**
- * Create room event tags
+ * Create room event tags (for both permanent and ephemeral messages)
+ * Returns properly formatted tag arrays
  */
 export function createRoomEventTags(
-  roomId: string,
-  title: string,
-  description: string,
-  image?: string,
-  scene?: RoomSceneConfig,
+  roomEventId: string,
+  isEphemeral?: boolean,
   tags?: string[]
-) {
-  const eventTags: string[][] = [
-    ['d', roomId],
-    ['title', title],
-    ['description', description],
+): string[][] {
+  const eventTags = [
+    ['e', generateEphemeralId(), 'wss://relay.ditto.pub', 'root'],
   ];
 
-  if (image) {
-    eventTags.push(['image', image]);
-  }
-
-  if (scene) {
-    eventTags.push(['scene', JSON.stringify(scene)]);
+  if (isEphemeral) {
+    // Add ephemeral-specific tags
+    eventTags.push(['ephemeral', 'true']); // Ephemeral marker
+    eventTags.push(['expiration', Date.now().toString()]); // Auto-expire in 24 hours (default)
   }
 
   if (tags && tags.length > 0) {
-    tags.forEach((tag) => eventTags.push(['t', tag]));
+    // Add custom tags
+    tags.forEach((tag) => {
+      eventTags.push(['t', tag]);
+    });
   }
 
   return eventTags;
-}
-
-/**
- * Create room message event tags
- */
-export function createRoomMessageTags(roomEventId: string, mentionedUsers?: string[]) {
-  const tags: string[][] = [
-    ['e', roomEventId, '', 'root'],
-  ];
-
-  if (mentionedUsers && mentionedUsers.length > 0) {
-    mentionedUsers.forEach((pubkey) => tags.push(['p', pubkey]));
-  }
-
-  return tags;
 }
