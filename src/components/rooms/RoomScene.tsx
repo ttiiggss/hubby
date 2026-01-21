@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { PerspectiveCamera } from '@react-three/drei';
 import type { Room, UserPosition } from '@/types/rooms';
 
 interface RoomSceneProps {
@@ -25,27 +25,21 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
   const bgColor = room.scene.backgroundColor || '#1a1a2e';
 
   return (
-    <div className="canvas-container rounded-xl overflow-hidden bg-black" style={{ height: '500px' }}>
-      <Canvas shadows dpr={[1, 2]}>
+    <div className="canvas-container rounded-xl overflow-hidden bg-black" style={{ height: '400px' }}>
+      <Canvas>
         <PerspectiveCamera makeDefault position={[0, 5, 10]} fov={60} />
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={3}
-          maxDistance={30}
-          maxPolarAngle={Math.PI / 2}
-        />
 
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <pointLight position={[-10, 10, -10]} intensity={0.5} color="#8b5cf6" />
+        {/* Lighting */}
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
 
+        {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-          <boxGeometry args={[floorSize, floorSize, 0.1]} />
-          <meshStandardMaterial color={bgColor} roughness={0.8} />
+          <boxGeometry args={[floorSize, floorSize, 0.2]} />
+          <meshStandardMaterial color={bgColor} roughness={0.9} />
         </mesh>
 
+        {/* User Avatars */}
         {demoUsers.map((user, index) => {
           const isCurrentUser = user.pubkey === currentUserPubkey;
           const angle = (index / Math.max(1, demoUsers.length)) * Math.PI * 2;
@@ -57,27 +51,29 @@ export function RoomScene({ room, users, currentUserPubkey }: RoomSceneProps) {
           const color = `hsl(${hue * 360}, 70%, 60%)`;
 
           return (
-            <group position={[x, 0.5, z]}>
+            <group key={user.pubkey} position={[x, 0.5, z]}>
               <mesh castShadow>
-                <sphereGeometry args={[0.5, 16, 16]} />
+                <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
                   color={color}
                   roughness={0.3}
                   metalness={0.5}
                   emissive={color}
-                  emissiveIntensity={0.2}
+                  emissiveIntensity={isCurrentUser ? 0.4 : 0.2}
                 />
               </mesh>
 
-              <mesh castShadow position={[0, -0.3, 0]}>
-                <boxGeometry args={[0.3, 0.1, 0.3]} />
-                <meshStandardMaterial color="#8b5cf6" roughness={0.2} />
+              {/* Base */}
+              <mesh castShadow position={[0, -0.6, 0]}>
+                <boxGeometry args={[0.8, 0.2, 0.8]} />
+                <meshStandardMaterial color="#8b5cf6" roughness={0.5} />
               </mesh>
 
+              {/* Current User Indicator */}
               {isCurrentUser && (
-                <mesh position={[0, 0.6, 0]} rotation={[0, Math.PI / 2, 0]}>
-                  <boxGeometry args={[0.8, 0.05, 0.3]} />
-                  <meshBasicMaterial color="#22c55e" transparent opacity={0.8} />
+                <mesh position={[0, 1.1, 0]}>
+                  <boxGeometry args={[1.2, 0.1, 1.2]} />
+                  <meshBasicMaterial color="#22c55e" transparent opacity={0.9} />
                 </mesh>
               )}
             </group>
